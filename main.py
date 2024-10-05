@@ -151,6 +151,7 @@ def get_passed_tasks(service, tasklist_id):
     return passed_tasks
 
 def display_tasks(service, tasklist_id):
+    print("Displaying tasks")
     pending_tasks = get_pending_tasks(service, tasklist_id)
     passed_tasks = get_passed_tasks(service, tasklist_id)
 
@@ -167,6 +168,7 @@ def display_tasks(service, tasklist_id):
         f"**Vergangene Aufgaben:**\n{passed_tasks_md if passed_tasks_md else 'Keine vergangenen Aufgaben.'}\n\n"
     )
     
+    print("Generated tasks overview message")
     return message
 
 # Define the input schema for creating a task
