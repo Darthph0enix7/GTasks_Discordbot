@@ -23,11 +23,11 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
-import locale
 
-# Set locale to German
-locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
-
+german_months = {
+    1: "Januar", 2: "Februar", 3: "März", 4: "April", 5: "Mai", 6: "Juni",
+    7: "Juli", 8: "August", 9: "September", 10: "Oktober", 11: "November", 12: "Dezember"
+}
 app = Flask(__name__)
 
 @app.route('/')
@@ -172,8 +172,8 @@ def display_tasks(service, tasklist_id):
     passed_tasks = get_passed_tasks(service, tasklist_id)
 
     def format_date(date_str):
-        date_obj = datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S.%fZ')
-        return date_obj.strftime('%d. %B')
+        date_obj = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        return f"{date_obj.day}. {german_months[date_obj.month]}"
 
     pending_tasks_md = '\n'.join([f"- **{task['title']}** (Fällig: {format_date(task['due_date'])})" for task in pending_tasks])
     passed_tasks_md = '\n'.join([f"- __{task['title']}__ (War fällig: {format_date(task['due_date'])})" for task in passed_tasks])
