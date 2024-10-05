@@ -5,17 +5,15 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Optional, Type
 from cryptography.fernet import Fernet
-from flask import Flask, request, jsonify
-import threading
 import pickle
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
+from flask import Flask
+import threading
 
 import dateutil.parser
 from dotenv import load_dotenv
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 import discord
 from discord.ext import tasks
@@ -28,6 +26,10 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
+# Scopes allow us to read and write tasks
+SCOPES = ['https://www.googleapis.com/auth/tasks']
+load_dotenv()
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -37,66 +39,32 @@ def health_check():
 def run_flask():
     app.run(host='0.0.0.0', port=8000)
 
-# Scopes allow us to read and write tasks
-SCOPES = ['https://www.googleapis.com/auth/tasks']
-load_dotenv()
-
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_NAME = 'hausaufgaben'
 azure_token = os.getenv("AZURE_TOKEN")
-key = os.environ.get('ENCRYPTION_KEY').encode()
+key = os.getenv('ENCRYPTION_KEY').encode()
 
 # Load the encrypted file
-with open("client_secret.json.encrypted", "rb") as file:
+with open("service_account.json.encrypted", "rb") as file:
     encrypted_data = file.read()
 
 # Decrypt the file
 fernet = Fernet(key)
 decrypted_data = fernet.decrypt(encrypted_data)
 
-# Save the decrypted file
-with open("client_secret.json", "wb") as file:
+# Save the decrypted service account credentials
+with open("service_account.json", "wb") as file:
     file.write(decrypted_data)
 
-def authenticate_google_tasks():
-    creds = None
-    # The token.pickle stores the user's access and refresh tokens
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
+async def authenticate_google_tasks():
+    # Decrypt the service account credentials and load them
+    with open("service_account.json", "r") as file:
+        service_account_info = file.read()
 
-    # If credentials are not available or expired, get new ones
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'client_secret.json', SCOPES,
-                redirect_uri='urn:ietf:wg:oauth:2.0:oob'
-            )
-            auth_url, _ = flow.authorization_url()
-            print(f"Please go to this URL: {auth_url}")
-
-            # Use Selenium to automate the browser interaction
-            driver = webdriver.Chrome()
-            driver.get(auth_url)
-
-            # Wait for the user to complete the authentication
-            while 'code=' not in driver.current_url:
-                time.sleep(1)
-
-            # Extract the authorization code from the URL
-            auth_code = driver.current_url.split('code=')[1]
-            driver.quit()
-
-            creds = flow.fetch_token(code=auth_code)
-
-        # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
+    # Authenticate using the service account credentials
+    creds = Credentials.from_service_account_file("service_account.json", scopes=SCOPES)
 
     return build('tasks', 'v1', credentials=creds)
-
 
 # Get Task List ID by Task List Title
 def get_tasklist_id_by_title(service, title):
@@ -264,13 +232,6 @@ agent_executor = create_react_agent(
     llm, tools, checkpointer=memory, state_modifier=system_prompt
 )
 
-# Create and start the Flask thread
-flask_thread = threading.Thread(target=run_flask)
-flask_thread.start()
-
-# Wait for a short period to ensure the Flask server is running
-time.sleep(2)
-
 # Initialize the Discord Bot
 intents = discord.Intents.default()
 intents.messages = True
@@ -278,9 +239,9 @@ intents.guilds = True
 intents.message_content = True
 
 bot = discord.Client(intents=intents)
-
-# Authenticate Google Tasks
 service = authenticate_google_tasks()
+tasklist_id = None
+pinned_message_id = None  # Store the pinned message ID to update it
 
 
 # Example function to send a message to the agent
@@ -392,14 +353,13 @@ async def start_bot():
 def run_bot():
     asyncio.run(start_bot())
 
-
-# Create and start the bot thread
+# Create and start the threads
 bot_thread = threading.Thread(target=run_bot)
+flask_thread = threading.Thread(target=run_flask)
+
 bot_thread.start()
+flask_thread.start()
 
 # Join the threads to ensure they run concurrently
 bot_thread.join()
 flask_thread.join()
-
-tasklist_id = None
-pinned_message_id = None 

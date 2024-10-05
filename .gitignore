@@ -1,3 +1,4 @@
 .env
 client_secret.json
-token.pickle
+service_account.json
+secret.key
