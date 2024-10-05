@@ -23,6 +23,10 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
+import locale
+
+# Set locale to German
+locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')
 
 app = Flask(__name__)
 
@@ -167,8 +171,12 @@ def display_tasks(service, tasklist_id):
     pending_tasks = get_pending_tasks(service, tasklist_id)
     passed_tasks = get_passed_tasks(service, tasklist_id)
 
-    pending_tasks_md = '\n'.join([f"- **{task['title']}** (Fällig: {task['due_date']})" for task in pending_tasks])
-    passed_tasks_md = '\n'.join([f"- __{task['title']}__ (War fällig: {task['due_date']})" for task in passed_tasks])
+    def format_date(date_str):
+        date_obj = datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S.%fZ')
+        return date_obj.strftime('%d. %B')
+
+    pending_tasks_md = '\n'.join([f"- **{task['title']}** (Fällig: {format_date(task['due_date'])})" for task in pending_tasks])
+    passed_tasks_md = '\n'.join([f"- __{task['title']}__ (War fällig: {format_date(task['due_date'])})" for task in passed_tasks])
 
     message = (
         "### Aufgabenübersicht\n"
