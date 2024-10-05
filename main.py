@@ -45,7 +45,6 @@ encryption_key = os.environ.get('ENCRYPTION_KEY').encode()
 # Decrypt token.pickle
 def decrypt_token():
     with open("token.pickle.encrypted", "rb") as encrypted_file:
-        print("Loading and decrypting token.pickle.encrypted...")
         encrypted_data = encrypted_file.read()
 
     fernet = Fernet(encryption_key)
@@ -138,18 +137,17 @@ def get_passed_tasks(service, tasklist_id):
 
     return passed_tasks
 
-# Example to display the tasks in a pinned message
 def display_tasks(service, tasklist_id):
     pending_tasks = get_pending_tasks(service, tasklist_id)
     passed_tasks = get_passed_tasks(service, tasklist_id)
 
-    pending_tasks_md = '\n'.join([f"- **{task['title']}** (Due: {task['due_date']})" for task in pending_tasks])
-    passed_tasks_md = '\n'.join([f"- __{task['title']}__ (Was due: {task['due_date']})" for task in passed_tasks])
+    pending_tasks_md = '\n'.join([f"- **{task['title']}** (Fällig: {task['due_date']})" for task in pending_tasks])
+    passed_tasks_md = '\n'.join([f"- __{task['title']}__ (War fällig: {task['due_date']})" for task in passed_tasks])
 
     message = (
-        "### Tasks Overview\n"
-        f"**Pending Tasks:**\n{pending_tasks_md if pending_tasks_md else 'No pending tasks.'}\n\n"
-        f"**Passed Tasks:**\n{passed_tasks_md if passed_tasks_md else 'No passed tasks.'}\n\n"
+        "### Aufgabenübersicht\n"
+        f"**Ausstehende Aufgaben:**\n{pending_tasks_md if pending_tasks_md else 'Keine ausstehenden Aufgaben.'}\n\n"
+        f"**Vergangene Aufgaben:**\n{passed_tasks_md if passed_tasks_md else 'Keine vergangenen Aufgaben.'}\n\n"
     )
     
     return message
@@ -228,7 +226,10 @@ get_current_date_tool = GetCurrentDateTool()
 # Mycroft agent configuration
 model_name = "gpt-4o-mini"
 endpoint = "https://models.inference.ai.azure.com"
-system_prompt = """You are an agent that helps students create Google Tasks for their homework. Process each assignment, create a corresponding task with all provided details, and fit short info into the title. Determine exact due dates from relative terms using the current date in RFC3339 format None if no due date is given. Debug and retry if issues arise. Always use the same language as the user."""
+system_prompt = """You are an MYcroft-mini a assitant that helps students create Google Tasks for their homework. Process each assignment, 
+create a corresponding task with all provided details, and fit short info into the title. 
+Determine exact due dates from relative terms using the current date in RFC3339 format None if no due date is given. 
+Debug and retry if issues arise. Always use the same language as the user."""
 
 # Initialize the language model
 llm = ChatOpenAI(
@@ -295,8 +296,6 @@ async def on_ready():
                     await msg.delete()    
     tasklist_id = get_tasklist_id_by_title(service, "Schule")  # Set the task list ID
     update_tasks.start()  # Start updating tasks every minute
-
-
 
 
 @bot.event
