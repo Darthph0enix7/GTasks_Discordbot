@@ -7,6 +7,7 @@ from typing import Optional, Type
 from cryptography.fernet import Fernet
 from flask import Flask, request, jsonify
 import threading
+import pickle
 
 import dateutil.parser
 from dotenv import load_dotenv
@@ -54,7 +55,6 @@ decrypted_data = fernet.decrypt(encrypted_data)
 with open("client_secret.json", "wb") as file:
     file.write(decrypted_data)
 
-# Authentication
 def authenticate_google_tasks():
     creds = None
     # The token.pickle stores the user's access and refresh tokens
@@ -68,10 +68,13 @@ def authenticate_google_tasks():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                'client_secret.json', SCOPES)
+                'client_secret.json', SCOPES,
+                redirect_uri='urn:ietf:wg:oauth:2.0:oob'
+            )
             auth_url, _ = flow.authorization_url()
             print(f"Please go to this URL: {auth_url}")
-            creds = flow.run_local_server(port=0)
+            code = input('Enter the authorization code: ')
+            creds = flow.fetch_token(code=code)
 
         # Save the credentials for the next run
         with open('token.pickle', 'wb') as token:
