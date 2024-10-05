@@ -1,18 +1,22 @@
 import os
+import time
 import pickle
-import threading
+import asyncio
 from datetime import datetime, timezone
 from typing import Optional, Type
 from cryptography.fernet import Fernet
-from flask import Flask
+from flask import Flask, request, jsonify
+import threading
+
 import dateutil.parser
 from dotenv import load_dotenv
+from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 import discord
 from discord.ext import tasks
+import nest_asyncio
 from pydantic import BaseModel, Field
-import asyncio
 
 from langchain.tools import BaseTool
 from langchain_openai import ChatOpenAI
@@ -20,10 +24,6 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
-# Load environment variables
-load_dotenv()
-
-# Flask application for health checks
 app = Flask(__name__)
 
 @app.route('/')
@@ -31,20 +31,16 @@ def health_check():
     return "Health Check OK", 200
 
 def run_flask():
-    print("Starting Flask server...")
     app.run(host='0.0.0.0', port=8000)
 
-# Discord bot and Google API credentials
+# Scopes allow us to read and write tasks
+SCOPES = ['https://www.googleapis.com/auth/tasks']
+load_dotenv()
+
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_NAME = 'hausaufgaben'
 azure_token = os.getenv("AZURE_TOKEN")
-encryption_key = os.getenv('ENCRYPTION_KEY').encode()
-
-# Google Tasks API scopes
-SCOPES = ['https://www.googleapis.com/auth/tasks']
-
-# Global variables
-service = None
+encryption_key = os.environ.get('ENCRYPTION_KEY').encode()
 
 # Decrypt token.pickle
 def decrypt_token():
@@ -60,7 +56,7 @@ def decrypt_token():
         print("Decrypted token saved to token.pickle")
 
 # Authenticate using OAuth tokens
-def authenticate_cloud():
+def authenticate_google_tasks():
     creds = None
     
     # Decrypt and load credentials from the token.pickle file
@@ -83,33 +79,22 @@ def authenticate_cloud():
     # Return authenticated Google Tasks API service
     return build('tasks', 'v1', credentials=creds)
 
+
 # Get Task List ID by Task List Title
 def get_tasklist_id_by_title(service, title):
-    print(f"Getting task list ID for title: {title}")
     result = service.tasklists().list().execute()
     tasklists = result.get('items', [])
-    
-    if not tasklists:
-        print("No task lists found.")
-    else:
-        print("Available task lists:")
-        for tasklist in tasklists:
-            print(f"Task List Title: {tasklist['title']}, ID: {tasklist['id']}")
-
     for tasklist in tasklists:
         if tasklist['title'].lower() == title.lower():
-            print(f"Found task list ID: {tasklist['id']}")
             return tasklist['id']
-    
     raise ValueError(f"Tasklist '{title}' not found")
 
-# Fetch tasks from the tasklist
+# Fetch all tasks from the tasklist
 def get_tasks(service, tasklist_id):
-    print(f"Fetching tasks for tasklist ID: {tasklist_id}")
     result = service.tasks().list(tasklist=tasklist_id).execute()
     return result.get('items', [])
 
-# Fetch pending tasks
+# Fetch pending tasks (tasks that are not completed)
 def get_pending_tasks(service, tasklist_id):
     tasks = get_tasks(service, tasklist_id)
     pending_tasks = []
@@ -117,7 +102,7 @@ def get_pending_tasks(service, tasklist_id):
 
     for task in tasks:
         due_date = task.get('due')
-        if task.get('status') != 'completed':
+        if task.get('status') != 'completed':  # Only display tasks that are not completed
             if due_date:
                 due_datetime = datetime.fromisoformat(due_date[:-1] + '+00:00')
                 if due_datetime > now:
@@ -126,13 +111,15 @@ def get_pending_tasks(service, tasklist_id):
                         'due_date': due_datetime.strftime('%Y-%m-%d')
                     })
             else:
+                # Include tasks without a due date in pending tasks
                 pending_tasks.append({
                     'title': task['title'],
                     'due_date': 'No due date'
                 })
+
     return pending_tasks
 
-# Fetch passed tasks
+# Fetch passed tasks (tasks where the due date has passed and they are not marked as completed)
 def get_passed_tasks(service, tasklist_id):
     tasks = get_tasks(service, tasklist_id)
     passed_tasks = []
@@ -140,7 +127,7 @@ def get_passed_tasks(service, tasklist_id):
 
     for task in tasks:
         due_date = task.get('due')
-        if task.get('status') != 'completed':
+        if task.get('status') != 'completed':  # Only consider non-completed tasks
             if due_date:
                 due_datetime = datetime.fromisoformat(due_date[:-1] + '+00:00')
                 if due_datetime < now:
@@ -148,9 +135,10 @@ def get_passed_tasks(service, tasklist_id):
                         'title': task['title'],
                         'due_date': due_datetime.strftime('%Y-%m-%d')
                     })
+
     return passed_tasks
 
-# Display tasks in a pinned message
+# Example to display the tasks in a pinned message
 def display_tasks(service, tasklist_id):
     pending_tasks = get_pending_tasks(service, tasklist_id)
     passed_tasks = get_passed_tasks(service, tasklist_id)
@@ -166,35 +154,6 @@ def display_tasks(service, tasklist_id):
     
     return message
 
-# Create a task in Google Tasks
-def create_task(task_title, due_date=None, priority=None, description=None):
-    print(f"Creating task with title: {task_title}")
-    service = authenticate_cloud()
-
-    tasklist_id = get_tasklist_id_by_title(service, "Schule")
-
-    parsed_due_date = None
-    if due_date:
-        try:
-            parsed_due_date = datetime.fromisoformat(due_date).isoformat()
-        except ValueError:
-            try:
-                parsed_due_date = dateutil.parser.parse(due_date).isoformat()
-            except ValueError:
-                raise ValueError("Invalid due date format.")
-
-    task_body = {'title': task_title}
-    if parsed_due_date:
-        task_body['due'] = parsed_due_date
-    if priority:
-        task_body['notes'] = f"Priority: {priority}"
-    if description:
-        task_body['notes'] = task_body.get('notes', '') + f"\nDescription: {description}"
-
-    task = service.tasks().insert(tasklist=tasklist_id, body=task_body).execute()
-    print(f"Task '{task_title}' created with ID: {task['id']}")
-    return f"Created task '{task_title}' with ID: {task['id']}"
-
 # Define the input schema for creating a task
 class CreateTaskInput(BaseModel):
     task_title: str = Field(description="Title of the task to create")
@@ -202,7 +161,7 @@ class CreateTaskInput(BaseModel):
     priority: Optional[str] = Field(default=None, description="Priority level of the task")
     description: Optional[str] = Field(default=None, description="Description of the task")
 
-# Define tool class for creating a task
+# Define the custom tool for creating a task in Google Tasks
 class CreateTaskTool(BaseTool):
     name: str = "create_task"
     description: str = "Tool for creating a new task in Google Tasks."
@@ -212,12 +171,42 @@ class CreateTaskTool(BaseTool):
     def _run(
         self, task_title: str, due_date: Optional[str] = None, priority: Optional[str] = None, description: Optional[str] = None, run_manager: Optional = None
     ) -> str:
-        return create_task(task_title, due_date, priority, description)
-    
+        """Create a new task in Google Tasks."""
+        # Authenticate and get the Google Tasks service
+        service = authenticate_google_tasks()
+
+        # Get the task list ID
+        tasklist_id = get_tasklist_id_by_title(service, "Schule")
+
+        # Parse the due date if provided
+        parsed_due_date = None
+        if due_date:
+            try:
+                parsed_due_date = datetime.fromisoformat(due_date).isoformat()
+            except ValueError:
+                try:
+                    parsed_due_date = dateutil.parser.parse(due_date).isoformat()
+                except ValueError:
+                    raise ValueError("Invalid due date format. Please provide a valid date.")
+
+        # Prepare the task body
+        task_body = {'title': task_title}
+        if parsed_due_date:
+            task_body['due'] = parsed_due_date
+        if priority:
+            task_body['notes'] = f"Priority: {priority}"
+        if description:
+            task_body['notes'] = (task_body['notes'] + f"\nDescription: {description}") if 'notes' in task_body else f"Description: {description}"
+
+        # Create the task
+        task = service.tasks().insert(tasklist=tasklist_id, body=task_body).execute()
+        return f"Created task '{task_title}' with ID: {task['id']}"
+
+# Define the input schema for getting the current date
 class GetCurrentDateInput(BaseModel):
     format: Optional[str] = Field(default="RFC3339", description="Format in which to return the current date (e.g., RFC3339)")
 
-# Define tool for getting the current date
+# Define the custom tool for getting the current date
 class GetCurrentDateTool(BaseTool):
     name: str = "get_current_date"
     description: str = "Tool for retrieving the current date in the specified format."
@@ -225,6 +214,7 @@ class GetCurrentDateTool(BaseTool):
     return_direct: bool = False
 
     def _run(self, format: Optional[str] = "RFC3339", run_manager: Optional = None) -> str:
+        """Get the current date in the specified format."""
         current_date = datetime.now(timezone.utc)
         if format == "RFC3339":
             return current_date.isoformat()
@@ -235,30 +225,41 @@ class GetCurrentDateTool(BaseTool):
 create_task_tool = CreateTaskTool()
 get_current_date_tool = GetCurrentDateTool()
 
-# Initialize language model agent
+# Mycroft agent configuration
+model_name = "gpt-4o-mini"
+endpoint = "https://models.inference.ai.azure.com"
+system_prompt = """You are an agent that helps students create Google Tasks for their homework. Process each assignment, create a corresponding task with all provided details, and fit short info into the title. Determine exact due dates from relative terms using the current date in RFC3339 format None if no due date is given. Debug and retry if issues arise. Always use the same language as the user."""
+
+# Initialize the language model
 llm = ChatOpenAI(
-    model_name="gpt-4o-mini",
-    base_url="https://models.inference.ai.azure.com",
+    model_name=model_name,
+    base_url=endpoint,
     api_key=azure_token
 )
 
+# Initialize memory saver
 memory = MemorySaver()
 
-tools = [create_task_tool, get_current_date_tool]
+# Create the agent executor
+tools = [get_current_date_tool, create_task_tool]
 agent_executor = create_react_agent(
-    llm, tools, checkpointer=memory, state_modifier="You are an agent that helps students create Google Tasks for their homework..."
+    llm, tools, checkpointer=memory, state_modifier=system_prompt
 )
 
-# Discord bot initialization
+# Initialize the Discord Bot
 intents = discord.Intents.default()
 intents.messages = True
 intents.guilds = True
 intents.message_content = True
-bot = discord.Client(intents=intents)
 
-# Agent message processing
+bot = discord.Client(intents=intents)
+service = authenticate_google_tasks()
+tasklist_id = None
+pinned_message_id = None  # Store the pinned message ID to update it
+
+
+# Example function to send a message to the agent
 def agent_send_message(message):
-    print(f"Sending message to agent: {message}")
     human_message = HumanMessage(content=message)
     response = agent_executor.invoke(
         {"messages": [human_message]},
@@ -266,9 +267,8 @@ def agent_send_message(message):
     )
     return response
 
-# Extract most recent AI message and tool calls
+# Function to extract the most recent message content and tool calls from the agent's response
 def get_most_recent_ai_message_content_and_tool_calls(response):
-    print("Extracting most recent AI message and tool calls...")
     messages = response.get('messages', [])
     most_recent_content = None
     tool_calls = []
@@ -288,13 +288,17 @@ def get_most_recent_ai_message_content_and_tool_calls(response):
 async def on_ready():
     global tasklist_id
     print(f'Logged in as {bot.user}')
-    tasklist_id = get_tasklist_id_by_title(authenticate_cloud(), "Schule")
-    print(f"Tasklist ID set to: {tasklist_id}")
-    update_tasks.start()
+    for guild in bot.guilds:
+        for channel in guild.text_channels:
+            if channel.name == CHANNEL_NAME:
+                async for msg in channel.history(limit=None):
+                    await msg.delete()    
+    tasklist_id = get_tasklist_id_by_title(service, "Schule")  # Set the task list ID
+    update_tasks.start()  # Start updating tasks every minute
 
 
 
-# On message event
+
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -304,54 +308,71 @@ async def on_message(message):
         content = message.content.strip().lower()
 
         if content.startswith('/task-history'):
-            print("Task history requested.")
             bot_message = await message.channel.send(f"### Last 10 Completed Tasks\n TODO: Implement this feature")
             await asyncio.sleep(10)
             await bot_message.delete()
             await message.delete()
             return
 
-        # Process message with the agent
+        # Pass the user message to the agent
         response = agent_send_message(message.content)
         agent_message, tool_calls = get_most_recent_ai_message_content_and_tool_calls(response)
 
+        # Send agent response back to the Discord channel
         bot_message = await message.channel.send(f"**Agent Response:** {agent_message}")
         await asyncio.sleep(30)  # Optionally delete messages after 30 seconds
         await message.delete()
         await bot_message.delete()
 
-# Updating tasks every 1 minute
-@tasks.loop(minutes=1)
+@tasks.loop(seconds=1)  # Loop to update tasks every 1 minute
 async def update_tasks():
-    print("Updating tasks...")
+    global pinned_message_id
     for guild in bot.guilds:
         for channel in guild.text_channels:
             if channel.name == CHANNEL_NAME:
-                tasks_overview = display_tasks(authenticate_cloud(), tasklist_id)
-                await channel.send(tasks_overview)
+                # Fetch the current pinned message
+                if pinned_message_id is None:
+                    async for msg in channel.history(limit=10):
+                        if msg.pinned and msg.author == bot.user and msg.content.startswith('### Tasks Overview'):
+                            pinned_message_id = msg.id
+                            break
 
-# Deleting non-pinned messages every 30 minutes
+                # Get the latest tasks overview
+                tasks_overview = display_tasks(service, tasklist_id)
+
+                # If we have a pinned message, update it
+                if pinned_message_id:
+                    pinned_message = await channel.fetch_message(pinned_message_id)
+                    await pinned_message.edit(content=tasks_overview)
+                else:
+                    # If no pinned message exists, create a new one
+                    bot_message = await channel.send(tasks_overview)
+                    await bot_message.pin()
+                    pinned_message_id = bot_message.id
+
+
 @tasks.loop(minutes=30)
 async def delete_non_pinned_messages():
-    print("Deleting non-pinned messages...")
     for guild in bot.guilds:
         for channel in guild.text_channels:
             if channel.name == CHANNEL_NAME:
                 async for msg in channel.history(limit=None):
-                    if not msg.pinned:
+                    if not msg.pinned and not msg.content.startswith('### Pinned Tasks'):
                         await msg.delete()
 
-# Start the bot
 async def start_bot():
     await bot.start(TOKEN)
 
 def run_bot():
     asyncio.run(start_bot())
 
-# Run bot and Flask server concurrently
+# Create and start the threads
 bot_thread = threading.Thread(target=run_bot)
 flask_thread = threading.Thread(target=run_flask)
+
 bot_thread.start()
 flask_thread.start()
+
+# Join the threads to ensure they run concurrently
 bot_thread.join()
 flask_thread.join()
