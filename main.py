@@ -50,14 +50,11 @@ encryption_key = os.environ.get('ENCRYPTION_KEY').encode()
 
 # Decrypt token.pickle
 def decrypt_token():
-    print("Decrypting token.pickle")
     with open("token.pickle.encrypted", "rb") as encrypted_file:
         encrypted_data = encrypted_file.read()
-        print("Read encrypted token data")
 
     fernet = Fernet(encryption_key)
     decrypted_data = fernet.decrypt(encrypted_data)
-    print("Decrypted token data")
 
     with open("token.pickle", "wb") as decrypted_file:
         decrypted_file.write(decrypted_data)
@@ -86,7 +83,6 @@ def authenticate_google_tasks():
         raise Exception("No valid credentials found. You need to authenticate locally first.")
 
     # Return authenticated Google Tasks API service
-    print("Building Google Tasks service")
     return build('tasks', 'v1', credentials=creds)
 
 
@@ -96,7 +92,6 @@ def get_tasklist_id_by_title(service, title):
     result = service.tasklists().list().execute()
     tasklists = result.get('items', [])
     for tasklist in tasklists:
-        print(f"Checking tasklist: {tasklist['title']}")
         if tasklist['title'].lower() == title.lower():
             print(f"Found matching tasklist ID: {tasklist['id']}")
             return tasklist['id']
@@ -112,62 +107,50 @@ def get_tasks(service, tasklist_id):
 
 # Fetch pending tasks (tasks that are not completed)
 def get_pending_tasks(service, tasklist_id):
-    print("Getting pending tasks")
     tasks = get_tasks(service, tasklist_id)
     pending_tasks = []
     now = datetime.now(timezone.utc)
-    print(f"Current time: {now.isoformat()}")
 
     for task in tasks:
         due_date = task.get('due')
-        print(f"Processing task: {task['title']}, due date: {due_date}")
         if task.get('status') != 'completed':  # Only display tasks that are not completed
             if due_date:
                 due_datetime = datetime.fromisoformat(due_date[:-1] + '+00:00')
-                print(f"Task due datetime: {due_datetime.isoformat()}")
                 if due_datetime > now:
                     pending_tasks.append({
                         'title': task['title'],
                         'due_date': due_datetime.strftime('%Y-%m-%d')
                     })
-                    print(f"Added pending task: {task['title']}")
             else:
                 # Include tasks without a due date in pending tasks
                 pending_tasks.append({
                     'title': task['title'],
                     'due_date': 'No due date'
                 })
-                print(f"Added pending task without due date: {task['title']}")
 
     print(f"Total pending tasks: {len(pending_tasks)}")
     return pending_tasks
 
 # Fetch passed tasks (tasks where the due date has passed and they are not marked as completed)
 def get_passed_tasks(service, tasklist_id):
-    print("Getting passed tasks")
     tasks = get_tasks(service, tasklist_id)
     passed_tasks = []
     now = datetime.now(timezone.utc)
-    print(f"Current time: {now.isoformat()}")
 
     for task in tasks:
         due_date = task.get('due')
-        print(f"Processing task: {task['title']}, due date: {due_date}")
         if task.get('status') != 'completed':  # Only consider non-completed tasks
             if due_date:
                 due_datetime = datetime.fromisoformat(due_date[:-1] + '+00:00')
-                print(f"Task due datetime: {due_datetime.isoformat()}")
                 if due_datetime < now:
                     passed_tasks.append({
                         'title': task['title'],
                         'due_date': due_datetime.strftime('%Y-%m-%d')
                     })
-                    print(f"Added passed task: {task['title']}")
     print(f"Total passed tasks: {len(passed_tasks)}")
     return passed_tasks
 
 def display_tasks(service, tasklist_id):
-    print("Displaying tasks")
     pending_tasks = get_pending_tasks(service, tasklist_id)
     passed_tasks = get_passed_tasks(service, tasklist_id)
 
@@ -184,7 +167,6 @@ def display_tasks(service, tasklist_id):
         f"**Vergangene Aufgaben:**\n{passed_tasks_md if passed_tasks_md else 'Keine vergangenen Aufgaben.'}\n\n"
     )
     
-    print("Generated tasks overview message")
     return message
 
 # Define the input schema for creating a task
@@ -205,29 +187,19 @@ class CreateTaskTool(BaseTool):
         self, task_title: str, due_date: Optional[str] = None, priority: Optional[str] = None, description: Optional[str] = None, run_manager: Optional = None
     ) -> str:
         """Create a new task in Google Tasks."""
-        print(f"Running CreateTaskTool with task_title: {task_title}, due_date: {due_date}, priority: {priority}, description: {description}")
-        # Authenticate and get the Google Tasks service
         service = authenticate_google_tasks()
 
-        # Get the task list ID
         tasklist_id = get_tasklist_id_by_title(service, "Schule")
-        print(f"Using tasklist ID: {tasklist_id}")
 
-        # Parse the due date if provided
         parsed_due_date = None
         if due_date:
             try:
                 parsed_due_date = datetime.fromisoformat(due_date).isoformat()
-                print(f"Parsed due date: {parsed_due_date}")
             except ValueError:
                 try:
                     parsed_due_date = dateutil.parser.parse(due_date).isoformat()
-                    print(f"Parsed due date with dateutil.parser: {parsed_due_date}")
                 except ValueError:
-                    print("Invalid due date format")
                     raise ValueError("Invalid due date format. Please provide a valid date.")
-
-        # Prepare the task body
         task_body = {'title': task_title}
         if parsed_due_date:
             task_body['due'] = parsed_due_date
@@ -235,9 +207,6 @@ class CreateTaskTool(BaseTool):
             task_body['notes'] = f"Priority: {priority}"
         if description:
             task_body['notes'] = (task_body.get('notes', '') + f"\nDescription: {description}").strip()
-        print(f"Task body prepared: {task_body}")
-
-        # Create the task
         task = service.tasks().insert(tasklist=tasklist_id, body=task_body).execute()
         print(f"Created task with ID: {task['id']}")
         return f"Created task '{task_title}' with ID: {task['id']}"
@@ -255,13 +224,11 @@ class GetCurrentDateTool(BaseTool):
 
     def _run(self, format: Optional[str] = "RFC3339", run_manager: Optional = None) -> str:
         """Get the current date in the specified format."""
-        print(f"Running GetCurrentDateTool with format: {format}")
         current_date = datetime.now(timezone.utc)
         if format == "RFC3339":
             date_str = current_date.isoformat()
         else:
             date_str = current_date.strftime(format)
-        print(f"Current date: {date_str}")
         return date_str
 
 # Instantiate the tools
@@ -277,7 +244,6 @@ Determine exact due dates from relative terms using the current date in RFC3339 
 Debug and retry if issues arise. Always use the same language as the user."""
 
 # Initialize the language model
-print("Initializing language model")
 llm = ChatOpenAI(
     model_name=model_name,
     base_url=endpoint,
@@ -285,11 +251,9 @@ llm = ChatOpenAI(
 )
 
 # Initialize memory saver
-print("Initializing memory saver")
 memory = MemorySaver()
 
 # Create the agent executor
-print("Creating agent executor")
 tools = [get_current_date_tool, create_task_tool]
 agent_executor = create_react_agent(
     llm, tools, checkpointer=memory, state_modifier=system_prompt
@@ -316,12 +280,10 @@ def agent_send_message(message):
         {"messages": [human_message]},
         config={"configurable": {"thread_id": "default", "recursion_limit": 1000}},
     )
-    print("Agent response received")
     return response
 
 # Function to extract the most recent message content and tool calls from the agent's response
 def get_most_recent_ai_message_content_and_tool_calls(response):
-    print("Extracting most recent AI message content and tool calls")
     messages = response.get('messages', [])
     most_recent_content = None
     tool_calls = []
@@ -332,10 +294,8 @@ def get_most_recent_ai_message_content_and_tool_calls(response):
         if isinstance(message, AIMessage):
             if message.content:
                 most_recent_content = message.content
-                print(f"Found AI message content: {most_recent_content}")
             if 'tool_calls' in message.additional_kwargs:
                 tool_calls.extend(message.additional_kwargs.get('tool_calls', []))
-                print(f"Found tool calls: {tool_calls}")
 
     return most_recent_content, tool_calls
 
@@ -343,7 +303,6 @@ def get_most_recent_ai_message_content_and_tool_calls(response):
 async def on_ready():
     global tasklist_id
     print(f'Logged in as {bot.user}')
-    print("Deleting non-pinned messages")
     for guild in bot.guilds:
         for channel in guild.text_channels:
             if channel.name == CHANNEL_NAME:
@@ -359,7 +318,6 @@ async def on_ready():
                 except Exception as e:
                     print(f"Unexpected error: {e} while deleting messages in {channel.name}")
     tasklist_id = get_tasklist_id_by_title(service, "Schule")  # Set the task list ID
-    print(f"Tasklist ID set: {tasklist_id}")
     update_tasks.start()  # Start updating tasks every minute
 
 @bot.event
@@ -372,7 +330,6 @@ async def on_message(message):
         print(f"Received message: {content}")
 
         if content.startswith('/task-history'):
-            print("Processing /task-history command")
             bot_message = await message.channel.send(f"### Last 10 Completed Tasks\n TODO: Implement this feature")
             await asyncio.sleep(10)
             await bot_message.delete()
@@ -385,7 +342,6 @@ async def on_message(message):
         agent_message, tool_calls = get_most_recent_ai_message_content_and_tool_calls(response)
 
         # Send agent response back to the Discord channel
-        print(f"Sending agent response: {agent_message}")
         bot_message = await message.channel.send(f"**Agent Response:** {agent_message}")
         await asyncio.sleep(30)  # Optionally delete messages after 30 seconds
         await message.delete()
@@ -394,7 +350,6 @@ async def on_message(message):
 @tasks.loop(seconds=10)  # Loop to update tasks every 10 seconds
 async def update_tasks():
     global pinned_message_id
-    print("Updating tasks")
     for guild in bot.guilds:
         for channel in guild.text_channels:
             if channel.name == CHANNEL_NAME:
