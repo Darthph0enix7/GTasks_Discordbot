@@ -33,9 +33,6 @@ def health_check():
 def run_flask():
     app.run(host='0.0.0.0', port=8000)
 
-flask_thread = threading.Thread(target=run_flask)
-flask_thread.start()
-
 # Scopes allow us to read and write tasks
 SCOPES = ['https://www.googleapis.com/auth/tasks']
 load_dotenv()
@@ -72,6 +69,8 @@ def authenticate_google_tasks():
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
                 'client_secret.json', SCOPES)
+            auth_url, _ = flow.authorization_url()
+            print(f"Please go to this URL: {auth_url}")
             creds = flow.run_local_server(port=0)
 
         # Save the credentials for the next run
@@ -79,6 +78,7 @@ def authenticate_google_tasks():
             pickle.dump(creds, token)
 
     return build('tasks', 'v1', credentials=creds)
+
 
 # Get Task List ID by Task List Title
 def get_tasklist_id_by_title(service, title):
@@ -361,9 +361,19 @@ async def delete_non_pinned_messages():
                     if not msg.pinned and not msg.content.startswith('### Pinned Tasks'):
                         await msg.delete()
 
-# Run the bot
-nest_asyncio.apply()
-async def main():
+async def start_bot():
     await bot.start(TOKEN)
 
-asyncio.run(main())
+def run_bot():
+    asyncio.run(start_bot())
+
+# Create and start the threads
+bot_thread = threading.Thread(target=run_bot)
+flask_thread = threading.Thread(target=run_flask)
+
+bot_thread.start()
+flask_thread.start()
+
+# Join the threads to ensure they run concurrently
+bot_thread.join()
+flask_thread.join()
