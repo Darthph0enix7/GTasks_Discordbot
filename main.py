@@ -384,11 +384,17 @@ def run_bot():
 
 # Create and start the threads
 flask_thread = threading.Thread(target=run_flask)
-bot_thread = threading.Thread(target=run_bot)
-
 flask_thread.start()
+
+# Ensure the Flask server is running before starting the bot and Google authentication
+flask_thread.join()
+
+bot_thread = threading.Thread(target=run_bot)
+google_auth_thread = threading.Thread(target=authenticate_google_tasks)
+
 bot_thread.start()
+google_auth_thread.start()
 
 # Join the threads to ensure they run concurrently
 bot_thread.join()
-flask_thread.join()
+google_auth_thread.join()
