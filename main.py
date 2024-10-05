@@ -50,6 +50,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_NAME = 'hausaufgaben'
 azure_token = os.getenv("AZURE_TOKEN")
 key = os.environ.get('ENCRYPTION_KEY').encode()
+auth_code = None
 
 # Load the encrypted file
 with open("client_secret.json.encrypted", "rb") as file:
@@ -261,6 +262,13 @@ agent_executor = create_react_agent(
     llm, tools, checkpointer=memory, state_modifier=system_prompt
 )
 
+# Create and start the Flask thread
+flask_thread = threading.Thread(target=run_flask)
+flask_thread.start()
+
+# Wait for a short period to ensure the Flask server is running
+time.sleep(2)
+
 # Initialize the Discord Bot
 intents = discord.Intents.default()
 intents.messages = True
@@ -268,9 +276,9 @@ intents.guilds = True
 intents.message_content = True
 
 bot = discord.Client(intents=intents)
+
+# Authenticate Google Tasks
 service = authenticate_google_tasks()
-tasklist_id = None
-pinned_message_id = None  # Store the pinned message ID to update it
 
 
 # Example function to send a message to the agent
@@ -382,19 +390,14 @@ async def start_bot():
 def run_bot():
     asyncio.run(start_bot())
 
-# Create and start the threads
-flask_thread = threading.Thread(target=run_flask)
-flask_thread.start()
 
-# Ensure the Flask server is running before starting the bot and Google authentication
-flask_thread.join()
-
+# Create and start the bot thread
 bot_thread = threading.Thread(target=run_bot)
-google_auth_thread = threading.Thread(target=authenticate_google_tasks)
-
 bot_thread.start()
-google_auth_thread.start()
 
 # Join the threads to ensure they run concurrently
 bot_thread.join()
-google_auth_thread.join()
+flask_thread.join()
+
+tasklist_id = None
+pinned_message_id = None 
