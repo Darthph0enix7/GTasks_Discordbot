@@ -7,3 +7,10 @@ langchain_openai
 langchain_experimental
 langchain_community
 cryptography
+pillow
+nest-asyncio
+python-dotenv
+Flask
+requests
+aiohttp
+discord.py

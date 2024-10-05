@@ -5,6 +5,8 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Optional, Type
 from cryptography.fernet import Fernet
+from flask import Flask, request, jsonify
+import threading
 
 import dateutil.parser
 from dotenv import load_dotenv
@@ -21,6 +23,18 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
+
+app = Flask(__name__)
+
+@app.route('/')
+def health_check():
+    return "Health Check OK", 200
+
+def run_flask():
+    app.run(host='0.0.0.0', port=8000)
+
+flask_thread = threading.Thread(target=run_flask)
+flask_thread.start()
 
 # Scopes allow us to read and write tasks
 SCOPES = ['https://www.googleapis.com/auth/tasks']
@@ -42,7 +56,7 @@ decrypted_data = fernet.decrypt(encrypted_data)
 # Save the decrypted file
 with open("client_secret.json", "wb") as file:
     file.write(decrypted_data)
-    
+
 # Authentication
 def authenticate_google_tasks():
     creds = None
