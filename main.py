@@ -383,11 +383,11 @@ def run_bot():
     asyncio.run(start_bot())
 
 # Create and start the threads
-bot_thread = threading.Thread(target=run_bot)
 flask_thread = threading.Thread(target=run_flask)
+bot_thread = threading.Thread(target=run_bot)
 
-bot_thread.start()
 flask_thread.start()
+bot_thread.start()
 
 # Join the threads to ensure they run concurrently
 bot_thread.join()
