@@ -38,7 +38,7 @@ SCOPES = ['https://www.googleapis.com/auth/tasks']
 load_dotenv()
 
 TOKEN = os.getenv('DISCORD_TOKEN')
-CHANNEL_NAME = 'hausaufgaben'
+CHANNEL_NAME = 'beta_hausaufgaben'
 azure_token = os.getenv("AZURE_TOKEN")
 encryption_key = os.environ.get('ENCRYPTION_KEY').encode()
 
