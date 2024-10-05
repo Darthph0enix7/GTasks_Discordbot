@@ -31,6 +31,14 @@ app = Flask(__name__)
 def health_check():
     return "Health Check OK", 200
 
+auth_code = None
+
+@app.route('/auth', methods=['POST'])
+def receive_auth_code():
+    global auth_code
+    auth_code = request.json.get('code')
+    return jsonify({"message": "Authorization code received"}), 200
+
 def run_flask():
     app.run(host='0.0.0.0', port=8000)
 
@@ -56,6 +64,7 @@ with open("client_secret.json", "wb") as file:
     file.write(decrypted_data)
 
 def authenticate_google_tasks():
+    global auth_code
     creds = None
     # The token.pickle stores the user's access and refresh tokens
     if os.path.exists('token.pickle'):
@@ -73,15 +82,18 @@ def authenticate_google_tasks():
             )
             auth_url, _ = flow.authorization_url()
             print(f"Please go to this URL: {auth_url}")
-            code = input('Enter the authorization code: ')
-            creds = flow.fetch_token(code=code)
+
+            # Wait for the authorization code to be received via the Flask route
+            while auth_code is None:
+                pass
+
+            creds = flow.fetch_token(code=auth_code)
 
         # Save the credentials for the next run
         with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
 
     return build('tasks', 'v1', credentials=creds)
-
 
 # Get Task List ID by Task List Title
 def get_tasklist_id_by_title(service, title):
