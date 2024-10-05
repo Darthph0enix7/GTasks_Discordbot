@@ -8,6 +8,9 @@ from cryptography.fernet import Fernet
 from flask import Flask, request, jsonify
 import threading
 import pickle
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 
 import dateutil.parser
 from dotenv import load_dotenv
@@ -30,15 +33,6 @@ app = Flask(__name__)
 @app.route('/')
 def health_check():
     return "Health Check OK", 200
-
-auth_code = None
-
-@app.route('/auth', methods=['POST'])
-def receive_auth_code():
-    global auth_code
-    data = request.get_json()
-    auth_code = data.get('code')
-    return jsonify({"message": "Authorization code received"}), 200
 
 def run_flask():
     app.run(host='0.0.0.0', port=8000)
@@ -65,7 +59,6 @@ with open("client_secret.json", "wb") as file:
     file.write(decrypted_data)
 
 def authenticate_google_tasks():
-    global auth_code
     creds = None
     # The token.pickle stores the user's access and refresh tokens
     if os.path.exists('token.pickle'):
@@ -84,11 +77,20 @@ def authenticate_google_tasks():
             auth_url, _ = flow.authorization_url()
             print(f"Please go to this URL: {auth_url}")
 
-            # Wait for the authorization code to be received via the Flask route
-            while auth_code is None:
-                pass
+            # Use Selenium to automate the browser interaction
+            driver = webdriver.Chrome()
+            driver.get(auth_url)
+
+            # Wait for the user to complete the authentication
+            while 'code=' not in driver.current_url:
+                time.sleep(1)
+
+            # Extract the authorization code from the URL
+            auth_code = driver.current_url.split('code=')[1]
+            driver.quit()
 
             creds = flow.fetch_token(code=auth_code)
+
         # Save the credentials for the next run
         with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)

@@ -16,3 +16,4 @@ requests
 aiohttp
 discord.py
 python-dateutil
+selenium
