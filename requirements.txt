@@ -6,6 +6,7 @@ langchain
 langchain_openai
 langchain_experimental
 langchain_community
+langgraph
 cryptography
 pillow
 nest-asyncio
