@@ -36,7 +36,8 @@ auth_code = None
 @app.route('/auth', methods=['POST'])
 def receive_auth_code():
     global auth_code
-    auth_code = request.json.get('code')
+    data = request.get_json()
+    auth_code = data.get('code')
     return jsonify({"message": "Authorization code received"}), 200
 
 def run_flask():
@@ -50,7 +51,6 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_NAME = 'hausaufgaben'
 azure_token = os.getenv("AZURE_TOKEN")
 key = os.environ.get('ENCRYPTION_KEY').encode()
-auth_code = None
 
 # Load the encrypted file
 with open("client_secret.json.encrypted", "rb") as file:
@@ -89,12 +89,12 @@ def authenticate_google_tasks():
                 pass
 
             creds = flow.fetch_token(code=auth_code)
-
         # Save the credentials for the next run
         with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
 
     return build('tasks', 'v1', credentials=creds)
+
 
 # Get Task List ID by Task List Title
 def get_tasklist_id_by_title(service, title):
