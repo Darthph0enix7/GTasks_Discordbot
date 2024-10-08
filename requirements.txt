@@ -18,3 +18,4 @@ discord.py
 python-dateutil
 selenium
 pyppeteer
+webuntis
