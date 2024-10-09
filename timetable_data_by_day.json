@@ -1,0 +1,542 @@
+{
+    "2024-10-07": [
+        {
+            "time": "08:00:00",
+            "details": {
+                "id": 3850162,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    479
+                ],
+                "subject_id": [
+                    442
+                ],
+                "room_id": [
+                    6
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "LK-Elt_Q34-WP_Alca",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "08:45:00",
+            "details": {
+                "id": 3850167,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    479
+                ],
+                "subject_id": [
+                    442
+                ],
+                "room_id": [
+                    6
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "LK-Elt_Q34-WP_Alca",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "09:45:00",
+            "details": {
+                "id": 3850172,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    479
+                ],
+                "subject_id": [
+                    442
+                ],
+                "room_id": [
+                    6
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "LK-Elt_Q34-WP_Alca",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "10:30:00",
+            "details": {
+                "id": 3850177,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    479
+                ],
+                "subject_id": [
+                    442
+                ],
+                "room_id": [
+                    6
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "LK-Elt_Q34-WP_Alca",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "11:30:00",
+            "details": {
+                "id": 3890163,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    50
+                ],
+                "subject_id": [
+                    415
+                ],
+                "room_id": [
+                    6
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "gk-Elt_Q34-WP_H\u00fcbn",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "12:15:00",
+            "details": {
+                "id": 3890168,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    50
+                ],
+                "subject_id": [
+                    415
+                ],
+                "room_id": [
+                    6
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "gk-Elt_Q34-WP_H\u00fcbn",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "13:30:00",
+            "details": {
+                "id": 3820636,
+                "class_groups": [
+                    4901
+                ],
+                "teacher_id": [
+                    4
+                ],
+                "subject_id": [
+                    202
+                ],
+                "room_id": [
+                    15
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "M-LK1_Q34M_Aren",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "14:15:00",
+            "details": {
+                "id": 3820641,
+                "class_groups": [
+                    4901
+                ],
+                "teacher_id": [
+                    4
+                ],
+                "subject_id": [
+                    202
+                ],
+                "room_id": [
+                    15
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "M-LK1_Q34M_Aren",
+                "activityType": "Unterricht"
+            }
+        }
+    ],
+    "2024-10-08": [
+        {
+            "time": "08:00:00",
+            "details": {
+                "id": 3807510,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    193
+                ],
+                "subject_id": [
+                    166
+                ],
+                "room_id": [
+                    18
+                ],
+                "code": null,
+                "statflags": "G",
+                "sg": "powi1_Q34-WP_Bick",
+                "activityType": "Pr\u00fcfung"
+            }
+        },
+        {
+            "time": "08:45:00",
+            "details": {
+                "id": 3807515,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    193
+                ],
+                "subject_id": [
+                    166
+                ],
+                "room_id": [
+                    18
+                ],
+                "code": null,
+                "statflags": "G",
+                "sg": "powi1_Q34-WP_Bick",
+                "activityType": "Pr\u00fcfung"
+            }
+        },
+        {
+            "time": "09:45:00",
+            "details": {
+                "id": 3820646,
+                "class_groups": [
+                    4901
+                ],
+                "teacher_id": [
+                    4
+                ],
+                "subject_id": [
+                    202
+                ],
+                "room_id": [
+                    9
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "M-LK1_Q34M_Aren",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "10:30:00",
+            "details": {
+                "id": 3820651,
+                "class_groups": [
+                    4901
+                ],
+                "teacher_id": [
+                    4
+                ],
+                "subject_id": [
+                    202
+                ],
+                "room_id": [
+                    9
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "M-LK1_Q34M_Aren",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "11:30:00",
+            "details": {
+                "id": 3804310,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    105
+                ],
+                "subject_id": [
+                    160
+                ],
+                "room_id": [
+                    13
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "d1_Q34-WP_Webe",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "12:15:00",
+            "details": {
+                "id": 3804315,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    105
+                ],
+                "subject_id": [
+                    160
+                ],
+                "room_id": [
+                    13
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "d1_Q34-WP_Webe",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "13:30:00",
+            "details": {
+                "id": 3842583,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    50
+                ],
+                "subject_id": [
+                    415
+                ],
+                "room_id": [],
+                "code": "cancelled",
+                "statflags": "L",
+                "sg": "gk-Elt_Q34-WP_H\u00fcbn",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "14:15:00",
+            "details": {
+                "id": 3842588,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    50
+                ],
+                "subject_id": [
+                    415
+                ],
+                "room_id": [],
+                "code": "cancelled",
+                "statflags": "L",
+                "sg": "gk-Elt_Q34-WP_H\u00fcbn",
+                "activityType": "Unterricht"
+            }
+        }
+    ],
+    "2024-10-09": [
+        {
+            "time": "08:00:00",
+            "details": {
+                "id": 3804320,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    105
+                ],
+                "subject_id": [
+                    160
+                ],
+                "room_id": [
+                    13
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "d1_Q34-WP_Webe",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "08:45:00",
+            "details": {
+                "id": 3804325,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    105
+                ],
+                "subject_id": [
+                    160
+                ],
+                "room_id": [
+                    13
+                ],
+                "code": null,
+                "statflags": "L",
+                "sg": "d1_Q34-WP_Webe",
+                "activityType": "Unterricht"
+            }
+        },
+        {
+            "time": "09:45:00",
+            "details": {
+                "id": 3809030,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    39
+                ],
+                "subject_id": [
+                    171
+                ],
+                "room_id": [
+                    45
+                ],
+                "code": null,
+                "statflags": "G",
+                "sg": "eth1_Q34-WP_Gork",
+                "activityType": "Pr\u00fcfung"
+            }
+        },
+        {
+            "time": "10:30:00",
+            "details": {
+                "id": 3809035,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    39
+                ],
+                "subject_id": [
+                    171
+                ],
+                "room_id": [
+                    45
+                ],
+                "code": null,
+                "statflags": "G",
+                "sg": "eth1_Q34-WP_Gork",
+                "activityType": "Pr\u00fcfung"
+            }
+        },
+        {
+            "time": "11:30:00",
+            "details": {
+                "id": 3799770,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    101
+                ],
+                "subject_id": [
+                    141
+                ],
+                "room_id": [
+                    16
+                ],
+                "code": null,
+                "statflags": "G",
+                "sg": "g2_Q34-WP_Stut",
+                "activityType": "Pr\u00fcfung"
+            }
+        },
+        {
+            "time": "12:15:00",
+            "details": {
+                "id": 3799775,
+                "class_groups": [
+                    4891,
+                    4896,
+                    4901,
+                    4906
+                ],
+                "teacher_id": [
+                    101
+                ],
+                "subject_id": [
+                    141
+                ],
+                "room_id": [
+                    16
+                ],
+                "code": null,
+                "statflags": "G",
+                "sg": "g2_Q34-WP_Stut",
+                "activityType": "Pr\u00fcfung"
+            }
+        }
+    ]
+}
