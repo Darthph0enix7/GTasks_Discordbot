@@ -272,7 +272,16 @@ class GetPendingAndPassedTasksTool(BaseTool):
             return "No pending or passed tasks found."
 
         return f"Pending and Passed Tasks:\n{task_list_output}"
-    
+# Mark a task as completed
+def mark_task_complete(service, tasklist_id, task_id):
+    print(f"Marking task {task_id} as complete in tasklist {tasklist_id}")
+    # Set the task status to 'completed'
+    task = service.tasks().get(tasklist=tasklist_id, task=task_id).execute()
+    task['status'] = 'completed'
+    updated_task = service.tasks().update(tasklist=tasklist_id, task=task_id, body=task).execute()
+    print(f"Task {task_id} marked as completed.")
+    return updated_task
+
 # Mark a task as completed using either its ID or title
 def mark_task_complete_by_id_or_title(service, tasklist_id, task_title=None, task_id=None):
     tasks = get_pending_and_passed_tasks(service, tasklist_id)
