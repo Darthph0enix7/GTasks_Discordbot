@@ -66,7 +66,7 @@ def authenticate_google_tasks():
     print("Authenticating with Google Tasks API using service account")
     
     # Load the service account credentials from service_creds.json
-    service_account_file = 'service_creds.json'
+    service_account_file = 'service_account.json'
     if not os.path.exists(service_account_file):
         raise Exception(f"Service account file {service_account_file} not found.")
     
