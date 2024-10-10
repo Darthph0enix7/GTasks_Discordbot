@@ -11,6 +11,7 @@ import threading
 import dateutil.parser
 from dotenv import load_dotenv
 from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 import discord
@@ -50,41 +51,30 @@ encryption_key = os.environ.get('ENCRYPTION_KEY').encode()
 
 # Decrypt token.pickle
 def decrypt_token():
-    with open("token.pickle.encrypted", "rb") as encrypted_file:
+    with open("service_account.json.encrypted", "rb") as encrypted_file:
         encrypted_data = encrypted_file.read()
 
     fernet = Fernet(encryption_key)
     decrypted_data = fernet.decrypt(encrypted_data)
 
-    with open("token.pickle", "wb") as decrypted_file:
+    with open("service_account.json", "wb") as decrypted_file:
         decrypted_file.write(decrypted_data)
-        print("Decrypted token saved to token.pickle")
+        print("Decrypted token saved to service_account.json")
 
 # Authenticate using OAuth tokens
 def authenticate_google_tasks():
-    print("Authenticating with Google Tasks API")
-    creds = None
+    print("Authenticating with Google Tasks API using service account")
     
-    # Decrypt and load credentials from the token.pickle file
-    decrypt_token()
-
-    # Load the token from token.pickle on the cloud environment
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token_file:
-            creds = pickle.load(token_file)
-            print("Token loaded successfully.")
+    # Load the service account credentials from service_creds.json
+    service_account_file = 'service_creds.json'
+    if not os.path.exists(service_account_file):
+        raise Exception(f"Service account file {service_account_file} not found.")
     
-    # If the credentials are expired, refresh them
-    if creds and creds.expired and creds.refresh_token:
-        print("Access token expired, refreshing...")
-        creds.refresh(Request())
-
-    if not creds:
-        raise Exception("No valid credentials found. You need to authenticate locally first.")
-
+    creds = service_account.Credentials.from_service_account_file(service_account_file)
+    print("Service account credentials loaded successfully.")
+    
     # Return authenticated Google Tasks API service
     return build('tasks', 'v1', credentials=creds)
-
 
 # Get Task List ID by Task List Title
 def get_tasklist_id_by_title(service, title):
@@ -237,6 +227,102 @@ class GetCurrentDateTool(BaseTool):
 create_task_tool = CreateTaskTool()
 get_current_date_tool = GetCurrentDateTool()
 
+
+# Fetch all tasks (pending and passed) with their task IDs
+def get_pending_and_passed_tasks(service, tasklist_id):
+    tasks = get_tasks(service, tasklist_id)
+    now = datetime.now(timezone.utc)
+    pending_passed_tasks = []
+
+    for task in tasks:
+        due_date = task.get('due')
+        if task.get('status') != 'completed':  # Only consider non-completed tasks
+            task_entry = {
+                'title': task['title'],
+                'id': task['id'],  # Include the task ID
+                'due_date': due_date if due_date else 'No due date'
+            }
+            pending_passed_tasks.append(task_entry)
+
+    print(f"Retrieved {len(pending_passed_tasks)} pending or passed tasks.")
+    return pending_passed_tasks
+
+# Define the custom tool for getting pending and passed tasks with task IDs
+class GetPendingAndPassedTasksTool(BaseTool):
+    name: str = "get_pending_and_passed_tasks"
+    description: str = "Tool to retrieve pending and passed tasks with their task IDs from Google Tasks."
+    return_direct: bool = True
+
+    def _run(self, run_manager: Optional = None) -> str:
+        """Fetch all pending and passed tasks with task IDs."""
+        service = authenticate_google_tasks()
+
+        # Get the tasklist ID
+        tasklist_id = get_tasklist_id_by_title(service, "Schule")
+        
+        # Fetch pending and passed tasks
+        tasks = get_pending_and_passed_tasks(service, tasklist_id)
+
+        # Format tasks into a user-friendly output
+        task_list_output = "\n".join(
+            [f"- Title: {task['title']}, ID: {task['id']}, Due Date: {task['due_date']}" for task in tasks]
+        )
+
+        if not task_list_output:
+            return "No pending or passed tasks found."
+
+        return f"Pending and Passed Tasks:\n{task_list_output}"
+    
+# Mark a task as completed using either its ID or title
+def mark_task_complete_by_id_or_title(service, tasklist_id, task_title=None, task_id=None):
+    tasks = get_pending_and_passed_tasks(service, tasklist_id)
+
+    # If task ID is provided, find the task directly
+    if task_id:
+        for task in tasks:
+            if task['id'] == task_id:
+                return mark_task_complete(service, tasklist_id, task_id)
+        return f"Task with ID '{task_id}' not found."
+
+    # If task title is provided, find the task by title
+    elif task_title:
+        for task in tasks:
+            if task['title'].lower() == task_title.lower():
+                return mark_task_complete(service, tasklist_id, task['id'])
+        return f"Task with title '{task_title}' not found."
+
+    return "Please provide either a task title or task ID."
+
+# Define the input schema for completing (deleting) a task
+class CompleteTaskByIdOrTitleInput(BaseModel):
+    task_title: Optional[str] = Field(default=None, description="Title of the task to complete (delete)")
+    task_id: Optional[str] = Field(default=None, description="ID of the task to complete (delete)")
+
+# Define the custom tool for completing a task in Google Tasks
+class CompleteTaskTool(BaseTool):
+    name: str = "complete_task"
+    description: str = "Tool to mark a task as completed (deleted) by its ID or title."
+    args_schema: Type[BaseModel] = CompleteTaskByIdOrTitleInput
+    return_direct: bool = False
+
+    def _run(self, task_title: Optional[str] = None, task_id: Optional[str] = None, run_manager: Optional = None) -> str:
+        """Mark a task as complete using its title or ID."""
+        service = authenticate_google_tasks()
+
+        # Get the tasklist ID for the relevant task list
+        tasklist_id = get_tasklist_id_by_title(service, "Schule")
+
+        # Mark the task as completed by ID or title
+        result = mark_task_complete_by_id_or_title(service, tasklist_id, task_title=task_title, task_id=task_id)
+        
+        return result
+
+# Instantiate the tool
+complete_task_tool = CompleteTaskTool()
+# Instantiate the tool
+get_pending_tasks_tool = GetPendingAndPassedTasksTool()
+
+
 # Mycroft agent configuration
 model_name = "gpt-4o-mini"
 endpoint = "https://models.inference.ai.azure.com"
@@ -256,7 +342,7 @@ llm = ChatOpenAI(
 memory = MemorySaver()
 
 # Create the agent executor
-tools = [get_current_date_tool, create_task_tool]
+tools = [get_current_date_tool, create_task_tool, complete_task_tool, get_pending_tasks_tool]
 agent_executor = create_react_agent(
     llm, tools, checkpointer=memory, state_modifier=system_prompt
 )
