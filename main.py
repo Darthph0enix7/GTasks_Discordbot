@@ -64,7 +64,7 @@ def decrypt_token():
 # Authenticate using OAuth tokens
 def authenticate_google_tasks():
     print("Authenticating with Google Tasks API using service account")
-    
+    decrypt_token()
     # Load the service account credentials from service_creds.json
     service_account_file = 'service_account.json'
     if not os.path.exists(service_account_file):
