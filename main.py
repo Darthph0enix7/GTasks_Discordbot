@@ -228,6 +228,10 @@ create_task_tool = CreateTaskTool()
 get_current_date_tool = GetCurrentDateTool()
 
 
+# Define the input schema for getting pending and passed tasks
+class GetPendingAndPassedTasksInput(BaseModel):
+    tasklist_title: str = Field(description="Title of the task list to fetch pending and passed tasks from")
+
 # Fetch all tasks (pending and passed) with their task IDs
 def get_pending_and_passed_tasks(service, tasklist_id):
     tasks = get_tasks(service, tasklist_id)
@@ -251,14 +255,15 @@ def get_pending_and_passed_tasks(service, tasklist_id):
 class GetPendingAndPassedTasksTool(BaseTool):
     name: str = "get_pending_and_passed_tasks"
     description: str = "Tool to retrieve pending and passed tasks with their task IDs from Google Tasks."
+    args_schema: Type[BaseModel] = GetPendingAndPassedTasksInput
     return_direct: bool = True
 
-    def _run(self, run_manager: Optional = None) -> str:
+    def _run(self, tasklist_title: str, run_manager: Optional = None) -> str:
         """Fetch all pending and passed tasks with task IDs."""
         service = authenticate_google_tasks()
 
-        # Get the tasklist ID
-        tasklist_id = get_tasklist_id_by_title(service, "Schule")
+        # Get the tasklist ID based on the title provided as input
+        tasklist_id = get_tasklist_id_by_title(service, tasklist_title)
         
         # Fetch pending and passed tasks
         tasks = get_pending_and_passed_tasks(service, tasklist_id)
@@ -269,9 +274,10 @@ class GetPendingAndPassedTasksTool(BaseTool):
         )
 
         if not task_list_output:
-            return "No pending or passed tasks found."
+            return f"No pending or passed tasks found for task list: {tasklist_title}."
 
-        return f"Pending and Passed Tasks:\n{task_list_output}"
+        return f"Pending and Passed Tasks in {tasklist_title}:\n{task_list_output}"
+
 # Mark a task as completed
 def mark_task_complete(service, tasklist_id, task_id):
     print(f"Marking task {task_id} as complete in tasklist {tasklist_id}")
