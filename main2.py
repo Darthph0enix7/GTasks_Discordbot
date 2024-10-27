@@ -6,6 +6,7 @@ import asyncio
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
+from cryptography.fernet import Fernet
 
 load_dotenv()
 # German months dictionary
@@ -13,6 +14,21 @@ german_months = {
     1: "Januar", 2: "Februar", 3: "März", 4: "April", 5: "Mai", 6: "Juni",
     7: "Juli", 8: "August", 9: "September", 10: "Oktober", 11: "November", 12: "Dezember"
 }
+encryption_key = os.environ.get('ENCRYPTION_KEY').encode()
+
+# Decrypt token.pickle
+def decrypt_token():
+    with open("service_account.json.encrypted", "rb") as encrypted_file:
+        encrypted_data = encrypted_file.read()
+
+    fernet = Fernet(encryption_key)
+    decrypted_data = fernet.decrypt(encrypted_data)
+
+    with open("service_account.json", "wb") as decrypted_file:
+        decrypted_file.write(decrypted_data)
+        print("Decrypted token saved to service_account.json")
+
+decrypt_token()
 
 # Google Tasks API Authentication
 def authenticate_google_tasks():
