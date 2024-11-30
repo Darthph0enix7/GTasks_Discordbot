@@ -19,3 +19,5 @@ python-dateutil
 selenium
 pyppeteer
 webuntis
+schedule
+psutil
