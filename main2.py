@@ -8,6 +8,8 @@ from googleapiclient.discovery import build
 from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 
+print("main2.py executed")
+
 load_dotenv()
 # German months dictionary
 german_months = {
