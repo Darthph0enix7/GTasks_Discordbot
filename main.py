@@ -7,6 +7,7 @@ from typing import Optional, Type
 from cryptography.fernet import Fernet
 from flask import Flask, request, jsonify
 import threading
+import schedule
 
 import dateutil.parser
 from dotenv import load_dotenv
@@ -516,14 +517,33 @@ def run_bot():
     print("Running bot")
     asyncio.run(start_bot())
 
-# Create and start the threads
-print("Starting threads")
-bot_thread = threading.Thread(target=run_bot)
-flask_thread = threading.Thread(target=run_flask)
+def run_flask():
+    # Your Flask app code here
+    pass
 
-bot_thread.start()
-flask_thread.start()
+def main():
+    print("Starting threads")
+    bot_thread = threading.Thread(target=run_bot)
+    flask_thread = threading.Thread(target=run_flask)
 
-# Join the threads to ensure they run concurrently
-bot_thread.join()
-flask_thread.join()
+    bot_thread.start()
+    flask_thread.start()
+
+    # Join the threads to ensure they run concurrently
+    bot_thread.join()
+    flask_thread.join()
+
+# Schedule the main function to run every hour
+schedule.every().hour.do(main)
+
+# Start the scheduler in a separate thread
+def run_scheduler():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+scheduler_thread = threading.Thread(target=run_scheduler)
+scheduler_thread.start()
+
+# Run the main function initially
+main()
